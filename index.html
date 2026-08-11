@@ -302,8 +302,10 @@ th[data-sortable]:hover{color:var(--cyan)}
 .drillGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:1100px){.drillGrid{grid-template-columns:1fr}}
 .dCol{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:rgba(255,255,255,.02);max-height:440px;overflow:auto}
-.dColH{font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
-.dClr{font-size:11px;color:var(--cyan);cursor:pointer;font-weight:400}
+.dColH{font-size:12px;font-weight:700;color:var(--txt2);margin-bottom:6px;display:flex;justify-content:flex-start;align-items:center;gap:6px;position:sticky;top:0;background:var(--panel);padding:2px 0;z-index:2}
+.dCnt{font-size:10px;font-weight:600;color:var(--txt3);background:rgba(120,180,255,.12);border-radius:8px;padding:1px 6px}
+.dClr{font-size:11px;color:var(--cyan);cursor:pointer;font-weight:400;margin-left:auto}
+.chartNote{font-size:11px;color:var(--txt3);text-align:right;margin-top:-6px}
 .dRow{padding:6px 6px;border-radius:6px;cursor:default}
 .dRow[style]{}
 .dRow:hover{background:rgba(63,210,255,.06)}
@@ -349,7 +351,7 @@ th[data-sortable]:hover{color:var(--cyan)}
 
 <div class="hdr">
   <h1>服务商积分池监控看板</h1>
-  <div class="subTime">数据更新时间：2026-08-10 18:19</div>
+  <div class="subTime">数据更新时间：2026-08-11 08:52</div>
   <div class="fbar">
     <div class="pgTabs">
       <button class="pgTab on" id="tab1" onclick="setPage(1)">积分总览</button>
@@ -1191,13 +1193,13 @@ function setPage(n){
 }
 /* ============ 基础指标页 ============ */
 var BASIC_METRICS=[
-  {key:'complaint',name:'客诉',color:'#FF5A6E',unit:'件',dec:0,agg:'sum',get:function(p){return (p.tCnt||0)+(p.nCnt||0)+(p.hBadCnt||0)},detail:'complaint'},
-  {key:'praise',name:'来电表扬',color:'#3DDC97',unit:'件',dec:0,agg:'sum',get:function(p){return p.praiseCnt||0},detail:'praise'},
-  {key:'defect',name:'不良品费率',color:'#FFC940',unit:'%',dec:2,agg:'avg',isPct:true,get:function(p){return p.aD!=null?p.aD*100:null},detail:'rate'},
-  {key:'multi',name:'一单多件率',color:'#3FD2FF',unit:'%',dec:2,agg:'avg',isPct:true,get:function(p){return p.aM!=null?p.aM*100:null},detail:'rate'},
-  {key:'repeat',name:'多次维修率',color:'#B48CFF',unit:'%',dec:2,agg:'avg',isPct:true,get:function(p){return p.aR!=null?p.aR*100:null},detail:'rate'},
-  {key:'remote',name:'远程交通费率',color:'#FFA940',unit:'%',dec:2,agg:'avg',isPct:true,get:function(p){return p.aRe!=null?p.aRe*100:null},detail:'rate'},
-  {key:'gold',name:'金牌',color:'#FFD24D',unit:'人',dec:0,agg:'sum',get:function(p){return p.goldAdd||0},detail:'gold'}
+  {key:'complaint',name:'客诉',color:'#FF5A6E',unit:'件',dec:0,agg:'sum',good:'down',get:function(p){return (p.tCnt||0)+(p.nCnt||0)+(p.hBadCnt||0)},detail:'complaint'},
+  {key:'praise',name:'来电表扬',color:'#3DDC97',unit:'件',dec:0,agg:'sum',good:'up',get:function(p){return p.praiseCnt||0},detail:'praise'},
+  {key:'defect',name:'不良品费率',color:'#FFC940',unit:'%',dec:2,agg:'avg',isPct:true,good:'down',target:2,get:function(p){return p.aD!=null?p.aD*100:null},detail:'rate'},
+  {key:'multi',name:'一单多件率',color:'#3FD2FF',unit:'%',dec:2,agg:'avg',isPct:true,good:'down',target:3,get:function(p){return p.aM!=null?p.aM*100:null},detail:'rate'},
+  {key:'repeat',name:'多次维修率',color:'#B48CFF',unit:'%',dec:2,agg:'avg',isPct:true,good:'down',target:15,get:function(p){return p.aR!=null?p.aR*100:null},detail:'rate'},
+  {key:'remote',name:'远程交通费率',color:'#FFA940',unit:'%',dec:2,agg:'avg',isPct:true,good:'down',target:15,get:function(p){return p.aRe!=null?p.aRe*100:null},detail:'rate'},
+  {key:'gold',name:'金牌',color:'#FFD24D',unit:'人',dec:0,agg:'sum',good:'up',get:function(p){return p.goldAdd||0},detail:'gold'}
 ];
 var BASIC_KEY='complaint';
 var BASIC_MONTH=null;
@@ -1211,15 +1213,22 @@ function basicNonMonth(p){
 }
 function basicMonthSeries(m){
   return MONTH_KEYS.map(function(mk){
-    var rows=(MONTHS[mk]||[]).filter(basicNonMonth);
+    var rows=(MONTHS[mk]||[]).filter(drillPass);
     var vals=rows.map(m.get).filter(function(v){return v!=null});
     var v = m.agg==='avg' ? (vals.length? vals.reduce(function(a,b){return a+b},0)/vals.length : null) : vals.reduce(function(a,b){return a+b},0);
     return {mk:mk, v:v, n:rows.length};
   });
 }
-function basicDist(m){
-  var mk=F.month||MONTH_KEYS[MONTH_KEYS.length-1];
-  var rows=(MONTHS[mk]||[]).filter(basicNonMonth).map(function(p){return {name:p.name,code:p.code,bmgr:p.bmgr,mgr:p.mgr,v:m.get(p)}}).filter(function(d){return d.v!=null});
+function prevOf(mk){var i=MONTH_KEYS.indexOf(mk);return i>0?MONTH_KEYS[i-1]:null}
+function drillPass(p){
+  if(!basicNonMonth(p))return false;
+  if(BASIC_DRILL.bmgr&&p.bmgr!==BASIC_DRILL.bmgr)return false;
+  if(BASIC_DRILL.mgr&&p.mgr!==BASIC_DRILL.mgr)return false;
+  return true;
+}
+function basicDist(m,mk0){
+  var mk=mk0||F.month||MONTH_KEYS[MONTH_KEYS.length-1];
+  var rows=(MONTHS[mk]||[]).filter(drillPass).map(function(p){return {name:p.name,code:p.code,bmgr:p.bmgr,mgr:p.mgr,v:m.get(p)}}).filter(function(d){return d.v!=null});
   rows.sort(function(a,b){return (b.v||0)-(a.v||0)});
   return {mk:mk, rows:rows.slice(0,15)};
 }
@@ -1262,7 +1271,7 @@ function buildBasicTabs(){
   $("basicTabs").innerHTML=BASIC_METRICS.map(function(m){return '<button class="subTab" data-k="'+m.key+'" onclick="renderBasic(\''+m.key+'\')">'+m.name+'</button>'}).join("");
 }
 var PROV={};MONTH_KEYS.forEach(function(k){(MONTHS[k]||[]).forEach(function(p){PROV[p.code]=p})});
-function basicMonthAgg(m,mk){var rows=(MONTHS[mk]||[]).filter(basicNonMonth);return basicMetricAgg(rows,m);}
+function basicMonthAgg(m,mk){var rows=(MONTHS[mk]||[]).filter(drillPass);return basicMetricAgg(rows,m);}
 function basicMetricAgg(list,m){var vals=list.map(function(p){return m.get(p)}).filter(function(v){return v!=null});if(!vals.length)return null;return m.agg==='avg'?vals.reduce(function(a,b){return a+b},0)/vals.length:vals.reduce(function(a,b){return a+b},0);}
 function basicSetMonth(mk){BASIC_MONTH=mk;renderBasic(BASIC_KEY);}
 function smoothPath(pts){
@@ -1275,15 +1284,23 @@ function smoothPath(pts){
   }
   return d;
 }
-function barsLine(series,unit,color,dec){
+function targetLine(target,dec,W,padL,padR,yBase,ph,max){
+  if(target==null||!max)return '';
+  var ty=yBase-(target/max*ph);
+  return '<line x1="'+padL+'" y1="'+ty.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+ty.toFixed(1)+'" stroke="#FF5A6E" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.85"/>'+
+         '<text x="'+(W-padR-4)+'" y="'+(ty-5).toFixed(1)+'" text-anchor="end" fill="#FF5A6E" font-size="11">目标 '+fmt(target,dec)+'%</text>';
+}
+function barsLine(series,unit,color,dec,target){
   var s3=series.slice(-3);
   if(!s3.length)return '<div class="emptyTip">无数据</div>';
   var W=920,H=300,padL=8,padR=8,padT=22,padB=36;
   var pw=W-padL-padR,ph=H-padT-padB;
   var vals=s3.map(function(d){return d.v||0});var max=Math.max.apply(null,vals)||1;
+  if(target!=null)max=Math.max(max,target*1.08);
   var n=s3.length,gap=pw/n,bw=Math.min(72,gap*0.55);
   var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="font-size:12px">';
   s+='<line x1="'+padL+'" y1="'+(H-padB)+'" x2="'+(W-padR)+'" y2="'+(H-padB)+'" stroke="var(--line)"/>';
+  s+=targetLine(target,dec,W,padL,padR,H-padB,ph,max);
   var pts=[];
   s3.forEach(function(d,i){var v=d.v||0,h=v/max*ph,x=padL+i*gap+(gap-bw)/2,y=H-padB-h;
     s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="3" fill="'+color+'" opacity="0.8"/>';
@@ -1295,14 +1312,16 @@ function barsLine(series,unit,color,dec){
     pts.forEach(function(pt){s+='<circle cx="'+pt[0].toFixed(1)+'" cy="'+pt[1].toFixed(1)+'" r="3.5" fill="'+color+'" stroke="var(--panel)" stroke-width="1.5"/>'});}
   s+='</svg>';return s;
 }
-function monthBarsClickable(series,color,selMk,dec){
+function monthBarsClickable(series,color,selMk,dec,target){
   if(!series||!series.length)return '<div class="emptyTip">无数据</div>';
   var W=920,H=300,padL=8,padR=8,padT=18,padB=36;
   var pw=W-padL-padR,ph=H-padT-padB;
   var vals=series.map(function(d){return d.v||0});var max=Math.max.apply(null,vals)||1;
+  if(target!=null)max=Math.max(max,target*1.08);
   var n=series.length,gap=pw/n,bw=Math.min(54,gap*0.6);
   var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="font-size:12px">';
   s+='<line x1="'+padL+'" y1="'+(H-padB)+'" x2="'+(W-padR)+'" y2="'+(H-padB)+'" stroke="var(--line)"/>';
+  s+=targetLine(target,dec,W,padL,padR,H-padB,ph,max);
   series.forEach(function(d,i){var v=d.v||0,h=v/max*ph,x=padL+i*gap+(gap-bw)/2,y=H-padB-h,sel=(d.mk===selMk);
     s+='<g style="cursor:pointer" onclick="basicSetMonth(\''+esc(d.mk)+'\')"><title>'+esc(d.mk)+'</title>'+
        '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="3" fill="'+color+'" opacity="'+(sel?'1':'0.7')+'"/>'+
@@ -1325,17 +1344,64 @@ function pieChart(segs){
   s+='<text x="'+cx+'" y="'+(cy+14)+'" text-anchor="middle" fill="var(--txt)" font-weight="700" font-size="15">'+total+'</text></svg>';
   return s;
 }
-function pieTable(segs){
-  var rows=segs.map(function(s){var chg=(s.prev!=null&&s.prev!==0)?((s.value-s.prev)/Math.abs(s.prev)*100):null;
-    var b=chg==null?'<span class="small">—</span>':('<b class="'+(chg>=0?'pos':'negc')+'">'+(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(1)+'%</b>');
-    return '<tr><td><span class="pctDot" style="background:'+s.color+'"></span>'+s.name+'</td><td class="num">'+s.value+'</td><td class="num">'+b+'</td></tr>';}).join('');
-  return '<table class="pieTbl"><thead><tr><th>类型</th><th>数量</th><th>环比</th></tr></thead><tbody>'+rows+'</tbody></table>';
+function chgIsGood(chg,good){return good==='down'?(chg<0):(chg>=0)}
+function chgBadge(chg,good){
+  if(chg==null)return '<span class="dBadge dFlat">—</span>';
+  return '<span class="dBadge '+(chgIsGood(chg,good)?'dUp':'dDown')+'" title="环比上月">'+(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(0)+'%</span>';
 }
-function basicDrillData(m,dim){
-  var mk=F.month,pk=prevKey();
+function pieTable(segs,h1,h2){
+  var tot=segs.reduce(function(a,b){return a+(b.value||0)},0)||1;
+  var rows=segs.map(function(s){var chg=(s.prev!=null&&s.prev!==0)?((s.value-s.prev)/Math.abs(s.prev)*100):null;
+    var b=chg==null?'<span class="small">—</span>':('<b class="'+(chgIsGood(chg,s.good||'up')?'pos':'negc')+'">'+(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(1)+'%</b>');
+    var pv=s.prev!=null?('<span class="small">上月 '+s.prev+'</span>'):'';
+    return '<tr><td><span class="pctDot" style="background:'+s.color+'"></span>'+esc(s.name)+'</td><td class="num">'+s.value+' <span class="small">'+(s.value/tot*100).toFixed(0)+'%</span></td><td class="num">'+b+' '+pv+'</td></tr>';}).join('');
+  return '<table class="pieTbl"><thead><tr><th>'+(h1||'类型')+'</th><th>'+(h2||'数量')+'</th><th>环比上月</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function basicSegs(m,dmk){
+  var pk=prevOf(dmk);
+  var cur=(MONTHS[dmk]||[]).filter(drillPass),prv=(MONTHS[pk]||[]).filter(drillPass);
+  function S(l,k){return sum(l,function(p){return p[k]||0})}
+  if(m.key==='complaint'){
+    return {title:'客诉类型分布',h1:'类型',h2:'件数',segs:[
+      {name:'雷区客诉',color:'#FF5A6E',good:'down',value:S(cur,'tCnt'),prev:S(prv,'tCnt')},
+      {name:'普通客诉',color:'#FFA940',good:'down',value:S(cur,'nCnt'),prev:S(prv,'nCnt')},
+      {name:'高标准不满意',color:'#B48CFF',good:'down',value:S(cur,'hBadCnt'),prev:S(prv,'hBadCnt')}
+    ].filter(function(s){return s.value>0})};
+  }
+  if(m.key==='praise'){
+    return {title:'正向表扬类型分布',h1:'类型',h2:'例数',segs:[
+      {name:'400来电表扬',color:'#3DDC97',good:'up',value:S(cur,'praiseCnt'),prev:S(prv,'praiseCnt')},
+      {name:'创感动案例',color:'#3FD2FF',good:'up',value:S(cur,'caseCnt'),prev:S(prv,'caseCnt')},
+      {name:'电商五星好评',color:'#FFC940',good:'up',value:S(cur,'ecomCnt'),prev:S(prv,'ecomCnt')},
+      {name:'高标准服务满意',color:'#B48CFF',good:'up',value:S(cur,'highOkCnt'),prev:S(prv,'highOkCnt')}
+    ].filter(function(s){return s.value>0})};
+  }
+  if(m.key==='gold'){
+    var COL={'工程师':'#FFD24D','关键岗位':'#3FD2FF'},FB=['#B48CFF','#3DDC97','#FFA940'];
+    function gcnt(mk){var o={};((DETAILS[mk]||{}).gold||[]).forEach(function(d){var p=PROV[d.c];if(p&&!drillPass(p))return;var k=d.gtype||'未分类';o[k]=(o[k]||0)+1});return o}
+    var a=gcnt(dmk),b=gcnt(pk);
+    return {title:'新增金牌类型分布',h1:'类型',h2:'人数',segs:Object.keys(a).map(function(k,i){
+      return {name:k,color:COL[k]||FB[i%FB.length],good:'up',value:a[k],prev:(b[k]!=null?b[k]:null)}})};
+  }
+  var vals=cur.map(m.get).filter(function(v){return v!=null});
+  if(!vals.length)return {title:'服务商区间分布',h1:'区间',h2:'网点数',segs:[]};
+  var avg=vals.reduce(function(x,y){return x+y},0)/vals.length;
+  var tg=m.target!=null?m.target:avg;
+  var bk=[
+    {name:'0（未发生）',color:'#3DDC97',good:'up',lo:-1,hi:0},
+    {name:'0 ~ 目标 '+fmt(tg,m.dec)+'%（达标）',color:'#3FD2FF',good:'up',lo:0,hi:tg},
+    {name:'目标 ~ 2 倍目标',color:'#FFC940',good:'down',lo:tg,hi:tg*2},
+    {name:'超 2 倍目标',color:'#FF5A6E',good:'down',lo:tg*2,hi:Infinity}
+  ];
+  function cnt(list){return bk.map(function(b){return list.map(m.get).filter(function(v){return v!=null&&v>b.lo&&v<=b.hi}).length})}
+  var ca=cnt(cur),cb=cnt(prv);
+  return {title:'服务商达标分布',h1:'区间（目标 '+fmt(tg,m.dec)+'%）',h2:'网点数',
+    segs:bk.map(function(b,i){return {name:b.name,color:b.color,good:b.good,value:ca[i],prev:(prv.length?cb[i]:null)}}).filter(function(s){return s.value>0})};
+}
+function basicDrillData(m,dim,mk0){
+  var mk=mk0||F.month,pk=prevOf(mk);
   var curL=MONTHS[mk]||[],prevL=MONTHS[pk]||[];
-  function pass(p){if(!basicNonMonth(p))return false;if(BASIC_DRILL.bmgr&&p.bmgr!==BASIC_DRILL.bmgr)return false;if(BASIC_DRILL.mgr&&p.mgr!==BASIC_DRILL.mgr)return false;return true;}
-  var cur=curL.filter(pass),prev=prevL.filter(pass);
+  var cur=curL.filter(drillPass),prev=prevL.filter(drillPass);
   function keyOf(p){return dim==='bmgr'?p.bmgr:(dim==='mgr'?p.mgr:p.code);}
   function nameOf(p){return dim==='bmgr'?p.bmgr:(dim==='mgr'?p.mgr:p.name);}
   var prevMap={};prev.forEach(function(p){var k=keyOf(p);(prevMap[k]=prevMap[k]||[]).push(p);});
@@ -1343,32 +1409,40 @@ function basicDrillData(m,dim){
   cur.forEach(function(p){var k=keyOf(p);if(seen[k])return;seen[k]=1;
     var grp=cur.filter(function(q){return keyOf(q)===k});
     var cv=basicMetricAgg(grp,m),pv=prevMap[k]?basicMetricAgg(prevMap[k],m):null;
-    rows.push({k:k,name:nameOf(p),total:cv,prev:pv,
+    rows.push({k:k,name:nameOf(p),total:cv,prev:pv,cnt:grp.length,
       t:sum(grp,function(p){return p.tCnt||0}),n:sum(grp,function(p){return p.nCnt||0}),h:sum(grp,function(p){return p.hBadCnt||0}),
+      ec:sum(grp,function(p){return p.ecomCnt||0}),hk:sum(grp,function(p){return p.highOkCnt||0}),ca:sum(grp,function(p){return p.caseCnt||0}),
+      gc:sum(grp,function(p){return p.goldCum||0}),
       tPrev:prevMap[k]?sum(prevMap[k],function(p){return p.tCnt||0}):null});});
   rows.sort(function(a,b){return (b.total||0)-(a.total||0)});
   return rows;
 }
-function renderDrill(m){
+function drillSub(m,r){
+  if(m.key==='complaint')return '雷 '+r.t+' · 普 '+r.n+(r.h?(' · 高标 '+r.h):'');
+  if(m.key==='praise')return '创感动 '+r.ca+' · 电商 '+r.ec+' · 高标满意 '+r.hk;
+  if(m.key==='gold')return '现有 '+r.gc+' 人 · 网点 '+r.cnt+' 家';
+  return '网点 '+r.cnt+' 家';
+}
+function renderDrill(m,mk0){
   var dims=[{k:'bmgr',t:'大区'},{k:'mgr',t:'区域经理'},{k:'prov',t:'服务商'}];
   function col(dim){
-    var rows=basicDrillData(m,dim.k);
+    var rows=basicDrillData(m,dim.k,mk0);
     var items=rows.map(function(r){
       var chg=(r.total!=null&&r.prev!=null&&r.prev!==0)?((r.total-r.prev)/Math.abs(r.prev)*100):null;
       var sel=(dim.k==='bmgr'&&BASIC_DRILL.bmgr===r.k)||(dim.k==='mgr'&&BASIC_DRILL.mgr===r.k);
-      var extra=m.key==='complaint'?'<span class="dSub">雷 '+r.t+' · 普 '+r.n+(r.h?(' · 高标 '+r.h):'')+'</span>':'';
-      var badge=chg==null?'<span class="dBadge dFlat">—</span>':('<span class="dBadge '+(chg>=0?'dUp':'dDown')+'">'+(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(0)+'%</span>');
+      var extra='<span class="dSub">'+drillSub(m,r)+'</span>';
+      var badge=chgBadge(chg,m.good);
       var clk=dim.k==='prov'?'':('onclick="basicDrillPick(\''+dim.k+'\',\''+esc(r.k)+'\')"');
       return '<div class="dRow'+(sel?' dSel':'')+'" '+(clk?'style="cursor:pointer" ':'')+clk+'><div class="dName">'+esc(r.name)+'</div>'+extra+'<div class="dVal">'+fmt(r.total,m.dec)+(m.isPct?'%':'')+' '+badge+'</div></div>';
-    }).join('');
+    }).join('')||'<div class="emptyTip">无数据</div>';
     var clr=(dim.k==='bmgr'&&BASIC_DRILL.bmgr)||(dim.k==='mgr'&&BASIC_DRILL.mgr)?'<a class="dClr" onclick="basicDrillPick(\''+dim.k+'\',\'\')">清除</a>':'';
-    return '<div class="dCol"><div class="dColH">'+dim.t+' '+clr+'</div>'+items+'</div>';
+    return '<div class="dCol"><div class="dColH">'+dim.t+' <span class="dCnt">'+rows.length+'</span>'+clr+'</div>'+items+'</div>';
   }
   return '<div class="drillGrid">'+dims.map(col).join('')+'</div>';
 }
 function basicDrillPick(dim,k){BASIC_DRILL[dim]=k;if(dim==='bmgr'&&k)BASIC_DRILL.mgr='';renderBasic(BASIC_KEY);}
 function basicDetailData(m,dmk){
-  function pass(code){var p=PROV[code];if(!p)return true;if(!basicNonMonth(p))return false;if(BASIC_DRILL.bmgr&&p.bmgr!==BASIC_DRILL.bmgr)return false;if(BASIC_DRILL.mgr&&p.mgr!==BASIC_DRILL.mgr)return false;return true;}
+  function pass(code){var p=PROV[code];if(!p)return true;return drillPass(p);}
   if(m.detail==='complaint'){var D=DETAILS[dmk]||{},rows=[];
     (D.cplT||[]).forEach(function(d){if(pass(d.c))rows.push({type:'雷区客诉',name:NAME[d.c]||d.c,e:d.e||'',t:d.t||'',x:d.x||'',a:d.a||''})});
     (D.cplN||[]).forEach(function(d){if(pass(d.c))rows.push({type:'普通客诉',name:NAME[d.c]||d.c,e:d.e||'',t:d.t||'',x:cplType(d.x),a:d.a||''})});
@@ -1380,8 +1454,8 @@ function basicDetailData(m,dmk){
   if(m.detail==='gold'){var G=(DETAILS[dmk]||{}).gold||[],rows=[];
     G.forEach(function(d){if(pass(d.c))rows.push({type:d.gtype||'',name:NAME[d.c]||d.c,e:d.n||'',t:d.t||'',x:'',a:''})});
     return {cols:[{t:'类型',k:'type'},{t:'服务商',k:'name'},{t:'人员',k:'e'},{t:'选拔时间',k:'t'}],rows:rows};}
-  var L=(MONTHS[dmk]||[]).filter(function(p){return basicNonMonth(p)&&(!BASIC_DRILL.bmgr||p.bmgr===BASIC_DRILL.bmgr)&&(!BASIC_DRILL.mgr||p.mgr===BASIC_DRILL.mgr)});
-  var pk=prevKey(),rows=L.filter(function(p){return m.get(p)!=null}).map(function(p){
+  var L=(MONTHS[dmk]||[]).filter(drillPass);
+  var pk=prevOf(dmk),rows=L.filter(function(p){return m.get(p)!=null}).map(function(p){
     var pv0=(MONTHS[pk]||[]).filter(function(q){return q.code===p.code})[0];
     var v=m.get(p),pv1=pv0?m.get(pv0):null,chg=(pv1!=null&&pv1!==0)?((v-pv1)/Math.abs(pv1)*100):null;
     return {name:p.name,e:p.bmgr,t:fmt(v,m.dec)+(m.isPct?'%':''),x:(chg==null?'':(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(1)+'%'),k2:v};});
@@ -1406,22 +1480,26 @@ function basicExport(){var tb=$("bDtlTable");if(!tb)return;
   rows.forEach(function(tr){csv+=Array.prototype.slice.call(tr.children).map(function(td){return '"'+td.textContent.replace(/"/g,'""')+'"'}).join(',')+'\n';});
   var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download=BASIC_KEY+'_'+(BASIC_MONTH||F.month)+'_明细.csv';a.click();}
 function renderComplaint(m,dmk){
-  var pk=prevKey();
+  return renderMetricCommon(m,dmk,{detailName:'客诉明细'});
+}
+function renderMetricCommon(m,dmk,opt){
+  opt=opt||{};
   var series=basicMonthSeries(m);
-  var left='<div class="panel"><h2><span class="bar"></span>月度变化趋势 <span class="tag">点击柱体切换右侧分布月份</span></h2>'+monthBarsClickable(series,m.color,dmk,m.dec)+'</div>';
-  var pc=(MONTHS[dmk]||[]).filter(basicNonMonth);
-  var t=sum(pc,function(p){return p.tCnt||0}),n=sum(pc,function(p){return p.nCnt||0}),h=sum(pc,function(p){return p.hBadCnt||0});
-  var pp=(MONTHS[pk]||[]).filter(basicNonMonth);
-  var pt=sum(pp,function(p){return p.tCnt||0}),pn=sum(pp,function(p){return p.nCnt||0}),ph=sum(pp,function(p){return p.hBadCnt||0});
-  var segs=[{name:'雷区客诉',value:t,color:'#FF5A6E',prev:pt},{name:'普通客诉',value:n,color:'#FFA940',prev:pn},{name:'高标准不满意',value:h,color:'#B48CFF',prev:ph}].filter(function(s){return (s.value||0)>0});
-  var right='<div class="panel"><h2><span class="bar"></span>'+dmk+' 客诉类型分布 <span class="tag">小字为环比上月</span></h2>'+(segs.length?('<div class="pieWrap">'+pieChart(segs)+pieTable(segs)+'</div>'):'<div class="emptyTip">当月无客诉</div>')+'</div>';
+  var left='<div class="panel"><h2><span class="bar" style="background:'+m.color+'"></span>月度变化趋势 <span class="tag">点击柱体切换分析月份</span></h2>'+
+    monthBarsClickable(series,m.color,dmk,m.dec,m.target)+'<div class="chartNote">当前分析月：'+esc(dmk)+'</div></div>';
+  var sg=basicSegs(m,dmk);
+  var right='<div class="panel"><h2><span class="bar" style="background:'+m.color+'"></span>'+esc(dmk)+' '+sg.title+' <span class="tag">小字为环比上月</span></h2>'+
+    (sg.segs&&sg.segs.length?('<div class="pieWrap">'+pieChart(sg.segs)+pieTable(sg.segs,sg.h1,sg.h2)+'</div>'):'<div class="emptyTip">当月无数据</div>')+'</div>';
   var trend='<div class="basic2col">'+left+right+'</div>';
-  var drill='<div class="panel"><h2><span class="bar"></span>三维度钻取 <span class="tag">大区 / 区域 / 服务商 联动</span></h2>'+renderDrill(m)+'</div>';
-  var detail='<div class="panel"><h2><span class="bar"></span>客诉明细 <span class="tag">可筛选 · 可排序 · 可导出</span></h2>'+basicDetailShell(m,dmk)+'</div>';
-  return trend+drill+detail;
+  var s3='<div class="panel"><h2><span class="bar"></span>近 3 个月趋势 <span class="tag">柱形 + 平滑折线'+(m.target!=null?' · 红色虚线为目标值':'')+'</span></h2>'+barsLine(series,m.unit,m.color,m.dec,m.target)+'</div>';
+  var dist=basicDist(m,dmk);
+  var distHtml='<div class="panel"><h2><span class="bar"></span>'+esc(dmk)+' 服务商分布 TOP15 <span class="tag">按'+m.name+'排序</span></h2>'+hBars(dist.rows,m.unit,m.color,m.dec)+'</div>';
+  var drill='<div class="panel"><h2><span class="bar"></span>三维度钻取 <span class="tag">大区 / 区域经理 / 服务商 联动 · 点击任一项其余两栏同步筛选</span></h2>'+renderDrill(m,dmk)+'</div>';
+  var detail='<div class="panel"><h2><span class="bar"></span>'+(opt.detailName||(m.name+'明细'))+' <span class="tag">可筛选 · 可排序 · 可导出</span></h2>'+basicDetailShell(m,dmk)+'</div>';
+  return trend+s3+distHtml+drill+detail;
 }
 function renderPraise(m,dmk){
-  var praises=(DETAILS[dmk]||{}).praise||[],total=praises.length;
+  var praises=((DETAILS[dmk]||{}).praise||[]).filter(function(d){var p=PROV[d.c];return !p||drillPass(p)}),total=praises.length;
   var byProv={};praises.forEach(function(d){(byProv[d.c]=byProv[d.c]||[]).push(d)});
   var topProv=Object.keys(byProv).map(function(c){return {name:NAME[c]||c,v:byProv[c].length}}).sort(function(a,b){return b.v-a.v}).slice(0,10);
   var byEng={};praises.forEach(function(d){(byEng[d.e]=byEng[d.e]||[]).push(d)});
@@ -1431,34 +1509,23 @@ function renderPraise(m,dmk){
   joy+='<div class="joyGrid"><div class="joyCol"><div class="joyH">TOP10 服务商</div>'+topProv.map(function(d,i){return '<div class="joyRow"><span class="joyRk">'+(i+1)+'</span><span class="joyName">'+esc(d.name)+'</span><span class="joyV">'+d.v+'</span></div>'}).join('')+'</div>';
   joy+='<div class="joyCol"><div class="joyH">TOP3 工程师（含代表好评）</div>'+topEng.map(function(d,i){var samp=d.rows.slice(0,2).map(function(r){var x=String(r.x||''),idx=x.indexOf('服务亮点');return idx>=0?x.slice(idx+4):x;}).join(' / ');return '<div class="joyRow joyEng"><span class="joyRk">'+(i+1)+'</span><span class="joyName">'+esc(d.name)+' <span class="small">'+d.v+'例</span></span><div class="joySamp">'+esc(samp.slice(0,46))+'</div></div>'}).join('')+'</div></div>';
   var voices=praises.slice(0,4).map(function(d){var x=String(d.x||'');return x.length>80?x.slice(0,80)+'…':x;});
-  joy+='<div class="joyH" style="margin-top:8px">用户心声</div>'+voices.map(function(v){return '<div class="joyVoice">“'+esc(v)+'”</div>'}).join('')+'</div>';
-  var series=basicMonthSeries(m);
-  var trend='<div class="panel"><h2><span class="bar"></span>近3个月趋势</h2>'+barsLine(series,m.unit,m.color,m.dec)+'</div>';
-  var dist=basicDist(m);
-  var distHtml='<div class="panel"><h2><span class="bar"></span>'+dmk+' 服务商分布 TOP15</h2>'+hBars(dist.rows,m.unit,m.color,m.dec)+'</div>';
-  var drill='<div class="panel"><h2><span class="bar"></span>三维度钻取</h2>'+renderDrill(m)+'</div>';
-  var detail='<div class="panel"><h2><span class="bar"></span>表扬明细 <span class="tag">可筛选 · 可排序 · 可导出</span></h2>'+basicDetailShell(m,dmk)+'</div>';
-  return joy+trend+distHtml+drill+detail;
+  joy+='<div class="joyH" style="margin-top:8px">用户心声</div>'+(voices.length?voices.map(function(v){return '<div class="joyVoice">“'+esc(v)+'”</div>'}).join(''):'<div class="emptyTip">当月无表扬记录</div>')+'</div>';
+  return joy+renderMetricCommon(m,dmk,{detailName:'表扬明细'});
 }
 function renderRateOrSimple(m,dmk){
-  var series=basicMonthSeries(m);
-  var trend='<div class="panel"><h2><span class="bar"></span>近3个月趋势 <span class="tag">柱形 + 平滑折线</span></h2>'+barsLine(series,m.unit,m.color,m.dec)+'</div>';
-  var dist=basicDist(m);
-  var distHtml='<div class="panel"><h2><span class="bar"></span>'+dmk+' 分布 TOP15 <span class="tag">按'+m.name+'排序</span></h2>'+hBars(dist.rows,m.unit,m.color,m.dec)+'</div>';
-  var drill='<div class="panel"><h2><span class="bar"></span>三维度钻取 <span class="tag">大区 / 区域 / 服务商 联动</span></h2>'+renderDrill(m)+'</div>';
-  var detail='<div class="panel"><h2><span class="bar"></span>明细 <span class="tag">可筛选 · 可排序 · 可导出</span></h2>'+basicDetailShell(m,dmk)+'</div>';
-  return trend+distHtml+drill+detail;
+  return renderMetricCommon(m,dmk);
 }
 function renderBasic(key){
   BASIC_KEY=key||BASIC_KEY;
   var m=BASIC_METRICS.filter(function(x){return x.key===BASIC_KEY})[0]; if(!m)return;
   var dmk=BASIC_MONTH||F.month;
-  var series=basicMonthSeries(m);
-  var cur=series[series.length-1].v,prev=series.length>1?series[series.length-2].v:null;
+  var pmk=prevOf(dmk);
+  var cur=basicMonthAgg(m,dmk),prev=pmk?basicMonthAgg(m,pmk):null;
   var chg=(cur!=null&&prev!=null&&prev!==0)?((cur-prev)/Math.abs(prev)*100):null;
   var html='<div class="basicHead"><div class="bt"><span class="bdot" style="background:'+m.color+'"></span>'+m.name+' <span class="bsub">基础指标 · 月度变化与构成</span></div>';
-  html+='<div class="bstat">当月（'+dmk+'）合计 <b style="color:'+m.color+'">'+fmt(basicMonthAgg(m,dmk),m.dec)+(m.isPct?'%':'')+'</b>'+m.unit;
-  if(chg!=null) html+=' · 环比 <b class="'+(chg>=0?'pos':'negc')+'">'+(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(1)+'%</b>';
+  html+='<div class="bstat">'+esc(dmk)+(m.agg==='avg'?' 均值 ':' 合计 ')+'<b style="color:'+m.color+'">'+fmt(cur,m.dec)+(m.isPct?'%':'')+'</b>'+(m.isPct?'':m.unit);
+  if(chg!=null) html+=' · 环比 <b class="'+(chgIsGood(chg,m.good)?'pos':'negc')+'">'+(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(1)+'%</b>';
+  if(m.target!=null) html+=' · 目标 <b>'+fmt(m.target,m.dec)+'%</b> <b class="'+(cur!=null&&cur<=m.target?'pos':'negc')+'">'+(cur!=null&&cur<=m.target?'达标':'未达标')+'</b>';
   html+='</div></div>';
   if(m.key==='complaint') html+=renderComplaint(m,dmk);
   else if(m.key==='praise') html+=renderPraise(m,dmk);
