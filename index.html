@@ -364,7 +364,7 @@ th[data-sortable]:hover{color:var(--cyan)}
 @media(max-width:900px){.drill4{grid-template-columns:1fr}}
 .drillTbl{width:100%;border-collapse:collapse;font-size:13px}
 .drillTbl th,.drillTbl td{padding:7px 6px;border-bottom:1px solid rgba(120,180,255,.1);text-align:center;white-space:nowrap}
-.drillTbl th{font-weight:700;color:var(--txt);background:rgba(120,180,255,.14);position:sticky;top:0;cursor:pointer;user-select:none;z-index:3}
+.drillTbl th{font-weight:700;color:var(--txt);background:#0e3052;position:sticky;top:0;cursor:pointer;user-select:none;z-index:3}
 .drillTbl th:hover{color:var(--cyan)}
 .drillTbl td.num{text-align:center}
 .drillTbl tr.drillSel td{background:rgba(63,210,255,.14)}
@@ -405,13 +405,33 @@ th[data-sortable]:hover{color:var(--cyan)}
 .joyWarEngCard .ecProv{font-size:11px;color:#fca5a5;margin-top:3px}
 .joyWarEngCard .ecKw{font-size:11px;color:#fee2e2;margin-top:3px}
 .joyWarTbl td.kw{color:#ffec99;font-size:11px}
+
+.drillTbl td:first-child{white-space:normal;font-size:11px;line-height:1.25}
+.greenMark{color:#3DDC97;font-weight:700}
+.joyWarEngRow{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+.joyWarEngRow .joyWarEngCard{flex:1 1 170px;min-width:160px}
+.joyWarTbl th.c,.joyWarTbl td.c{text-align:center}
+.joyWarTbl td,.joyWarTbl th{vertical-align:top}
+.joyWarTbl{font-size:11px}
+.joyWarCol .joyWarTbl{max-width:560px}
+.cplTblBox .pieTbl td,.cplTblBox .pieTbl th{text-align:left}
+.cplTblBox{max-width:340px}
+.goldNewWrap{display:flex;gap:18px;flex-wrap:wrap}
+.goldNewBox{flex:1 1 300px;min-width:260px}
+.goldNewTbl{border-collapse:collapse;font-size:12px;width:100%}
+.goldNewTbl th,.goldNewTbl td{padding:5px 8px;border-bottom:1px solid rgba(120,180,255,.12);text-align:left;white-space:nowrap}
+.goldNewTbl th{background:#0e3052;color:var(--txt2);font-weight:600;cursor:pointer;position:sticky;top:0;z-index:2}
+.goldNewTbl th:hover{color:var(--cyan)}
+.cplPieTip{position:fixed;z-index:9999;background:#06243f;border:1px solid var(--cyan);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--txt);box-shadow:0 6px 20px rgba(0,0,0,.45);max-width:240px;pointer-events:none}
+.cplPieTip .ttl{font-weight:700;margin-bottom:4px;color:var(--cyan)}
+.cplPieTip .tr{display:flex;justify-content:space-between;gap:14px}
 </style>
 </head>
 <body>
 
 <div class="hdr">
   <h1>服务商积分池监控看板</h1>
-  <div class="subTime">数据更新时间：2026-08-11 19:10</div>
+  <div class="subTime">数据更新时间：2026-08-12 08:45</div>
   <div class="fbar">
     <div class="pgTabs">
       <button class="pgTab on" id="tab1" onclick="setPage(1)">积分总览</button>
@@ -1508,8 +1528,11 @@ function complaintTypePieSegs(dmk){
   var prev={};rows.forEach(function(r){prev[r.sub]=(prev[r.sub]||0)+r.prev;});
   var COL=['#FF5A6E','#FFA940','#FFC940','#3DDC97','#3FD2FF','#B48CFF','#FF85C0','#A78BFA','#F87171','#FBBF24','#34D399','#60A5FA'];
   var segs=Object.keys(sub).map(function(k,i){return {name:k,color:COL[i%COL.length],good:'down',value:sub[k],prev:prev[k]||0};}).sort(function(a,b){return b.value-a.value;});
-  var cap=10;if(segs.length>cap){var other=segs.slice(cap);segs=segs.slice(0,cap);var ov=other.reduce(function(a,b){return a+b.value},0),op=other.reduce(function(a,b){return a+b.prev},0);segs.push({name:'其他',color:'#9CA3AF',good:'down',value:ov,prev:op});}
-  return segs;
+  var total=segs.reduce(function(a,b){return a+(b.value||0)},0)||1;
+  var keep=segs.filter(function(s){return (s.value/total)>=0.05;});
+  var other=segs.filter(function(s){return (s.value/total)<0.05;});
+  if(other.length){var ov=other.reduce(function(a,b){return a+b.value},0),op=other.reduce(function(a,b){return a+b.prev},0);keep.push({name:'其他',color:'#9CA3AF',good:'down',value:ov,prev:op});}
+  return keep.sort(function(a,b){return b.value-a.value;});
 }
 function complaintTypeTableRows(dmk){
   var order={'雷区客诉':0,'普通客诉':1,'高标准不满意':2};
@@ -1598,10 +1621,10 @@ function basicDrillData(m,dim,mk0){
 function goldDrillData(m,dim,mk,pk){
   if(dim==='eng'){
     var G=DETAILS[mk]||{},PG=prevOf(mk)?DETAILS[prevOf(mk)]||{}:{};
-    function cntG(D){var o={};(D.gold||[]).forEach(function(d){var p=PROV[d.c];if(p&&!drillPass(p))return;var n=d.n||'—';o[n]=(o[n]||0)+1;});return o;}
-    var cg=cntG(G),pg=cntG(PG);
-    var rows=Object.keys(cg).map(function(n){return {k:n,name:n,total:cg[n],prevTotal:pg[n]!=null?pg[n]:null,add:cg[n],addPrev:pg[n]!=null?pg[n]:null};});
-    rows.sort(function(a,b){return b.total-a.total});return rows;
+    function cnt(D){var o={};(D.gold||[]).forEach(function(d){var p=PROV[d.c];if(p&&!drillPass(p))return;var n=d.n||'—';if(!o[n])o[n]={n:n,gtype:d.gtype||'—',t:d.t||'',cnt:0};o[n].cnt++;});return o;}
+    var c=cnt(G);
+    var rows=Object.keys(c).map(function(n){return {k:n,name:n,gtype:c[n].gtype,t:c[n].t,cnt:c[n].cnt};});
+    rows.sort(function(a,b){return (b.cnt||0)-(a.cnt||0)});return rows;
   }
   var curL=(MONTHS[mk]||[]).filter(drillPass),prevL=(MONTHS[pk]||[]).filter(drillPass);
   function keyOf(p){return dim==='bmgr'?p.bmgr:(dim==='mgr'?p.mgr:p.code);}
@@ -1611,9 +1634,7 @@ function goldDrillData(m,dim,mk,pk){
   curL.forEach(function(p){var k=keyOf(p);if(seen[k])return;seen[k]=1;
     var grp=curL.filter(function(q){return keyOf(q)===k});
     var t=sum(grp,function(p){return p.goldCum||0}),a=sum(grp,function(p){return p.goldAdd||0});
-    var pt=prevMap[k]?sum(prevMap[k],function(p){return p.goldCum||0}):null;
-    var pa=prevMap[k]?sum(prevMap[k],function(p){return p.goldAdd||0}):null;
-    rows.push({k:k,name:nameOf(p),total:t,prevTotal:pt,add:a,addPrev:pa});});
+    rows.push({k:k,name:nameOf(p),total:t,add:a});});
   rows.sort(function(a,b){return (b.total||0)-(a.total||0)});return rows;
 }
 function rateDrillData(m,dim,mk,pk){
@@ -1635,44 +1656,51 @@ function drillSub(m,r){
   return '网点 '+r.cnt+' 家';
 }
 function renderDrill(m,mk0){
-  var dims = m.isPct ? [{k:'bmgr',t:'大区'},{k:'mgr',t:'区域经理'},{k:'prov',t:'服务商'}] : [{k:'bmgr',t:'大区'},{k:'mgr',t:'区域经理'},{k:'prov',t:'服务商'},{k:'eng',t:'工程师'}];
-  function headCells(){
+  var isGold=m.key==='gold';
+  var dims=m.isPct?[{k:'bmgr',t:'大区'},{k:'mgr',t:'区域经理'},{k:'prov',t:'服务商'}]
+    :(isGold?[{k:'bmgr',t:'大区'},{k:'mgr',t:'区域经理'},{k:'prov',t:'服务商'},{k:'eng',t:'人员'}]
+            :[{k:'bmgr',t:'大区'},{k:'mgr',t:'区域经理'},{k:'prov',t:'服务商'},{k:'eng',t:'工程师'}]);
+  function headCells(dim){
+    if(isGold){
+      if(dim.k==='eng') return '<th data-sortable>人员类型</th><th data-sortable>选拔时间</th>';
+      return '<th data-sortable>总金牌</th><th data-sortable>当月新增</th>';
+    }
     if(m.key==='complaint') return '<th data-sortable>总数</th><th data-sortable>雷区</th><th data-sortable>普通</th><th data-sortable>不满意</th>';
-    if(m.key==='gold') return '<th data-sortable>总数(保有)</th><th data-sortable>新增</th>';
-    if(m.isPct) return '<th data-sortable>率</th><th data-sortable>环比</th><th>网点数</th>';
+    if(m.isPct) return '<th data-sortable>率</th><th data-sortable>环比</th>';
     return '<th data-sortable>数值</th>';
   }
-  function cells(r){
+  function cells(dim,r){
+    if(isGold){
+      if(dim.k==='eng') return '<td>'+esc(r.gtype||'—')+'</td><td class="small">'+esc(r.t||'')+'</td>';
+      var g=(r.add||0)>0;
+      return '<td class="num">'+fmt(r.total,0)+'</td><td class="num'+(g?' pos':'')+'">'+(g?'<span class="greenMark">●</span> ':'')+fmt(r.add,0)+'</td>';
+    }
     if(m.key==='complaint'){
       return '<td class="num">'+fmt(r.total,0)+' '+countBadge(r.total,r.prevTotal||r.prev,'down')+'</td>'+
         '<td class="num">'+fmt(r.t,0)+' '+countBadge(r.t,r.tPrev,'down')+'</td>'+
         '<td class="num">'+fmt(r.n,0)+' '+countBadge(r.n,r.nPrev,'down')+'</td>'+
         '<td class="num">'+fmt(r.h,0)+' '+countBadge(r.h,r.hPrev,'down')+'</td>';
     }
-    if(m.key==='gold'){
-      return '<td class="num">'+fmt(r.total,0)+(r.prevTotal!=null?(' '+countBadge(r.total,r.prevTotal,'up')):'')+'</td>'+
-        '<td class="num">'+fmt(r.add,0)+' '+countBadge(r.add,r.addPrev,'up')+'</td>';
-    }
     if(m.isPct){
       var chg=countChg(r.total,r.prev);
       var b=chg==null?'<span class="small">—</span>':(chg===Infinity?'<b class="negc">新增</b>':('<b class="'+(chgIsGood(chg,m.good)?'pos':'negc')+'">'+(chg>=0?'▲':'▼')+Math.abs(chg).toFixed(0)+'%</b>'));
-      return '<td class="num">'+fmt(r.total,m.dec)+(m.isPct?'%':'')+'</td><td class="num">'+b+'</td><td class="num small">'+r.cnt+'</td>';
+      return '<td class="num">'+fmt(r.total,m.dec)+(m.isPct?'%':'')+'</td><td class="num">'+b+'</td>';
     }
     return '<td class="num">'+fmt(r.total,m.dec)+(m.isPct?'%':'')+' '+countBadge(r.total,r.prevTotal||r.prev,m.good)+'</td>';
   }
   function col(dim){
     var rows=basicDrillData(m,dim.k,mk0);
     var sel=BASIC_DRILL[dim.k];
-    var colspan = m.key==='complaint'?5:(m.isPct?4:3);
+    var ncol=m.key==='complaint'?5:(m.isPct?3:3);
     var body=rows.map(function(r){
       var isSel=sel===r.k;
-      return '<tr class="drillRow'+(isSel?' drillSel':'')+'" onclick="basicDrillPick(\'+dim.k+\',\'+esc(r.k)+\')">'+
-        '<td>'+esc(r.name)+'</td>'+cells(r)+'</tr>';
-    }).join('')||'<tr><td colspan="'+colspan+'" class="emptyTip">无数据</td></tr>';
+      return '<tr class="drillRow'+(isSel?' drillSel':'')+'" onclick="basicDrillPick(\''+dim.k+'\',\''+esc(r.k)+'\')">'+
+        '<td>'+esc(r.name)+'</td>'+cells(dim,r)+'</tr>';
+    }).join('')||'<tr><td colspan="'+ncol+'" class="emptyTip">无数据</td></tr>';
     return '<div class="dCol"><div class="dColH">'+dim.t+' <span class="dCnt">'+rows.length+'</span></div>'+
-      '<div class="dScroll"><table class="drillTbl"><thead><tr><th data-sortable>'+dim.t+'</th>'+headCells()+'</tr></thead><tbody>'+body+'</tbody></table></div></div>';
+      '<div class="dScroll"><table class="drillTbl"><thead><tr><th data-sortable>'+dim.t+'</th>'+headCells(dim)+'</tr></thead><tbody>'+body+'</tbody></table></div></div>';
   }
-  var cls = dims.length===4?'drill4':'drill3';
+  var cls=dims.length===4?'drill4':'drill3';
   return '<div class="drillGrid '+cls+'">'+dims.map(col).join('')+'</div>';
 }
 function basicDrillPick(dim,k){
@@ -1689,10 +1717,10 @@ function basicDetailData(m,dmk){
     (D.cplT||[]).forEach(function(d){var p=provOf(d.c);if(pass(d.c))rows.push({type:'雷区客诉',bmgr:p.bmgr||'—',mgr:p.mgr||'—',name:NAME[d.c]||d.c,e:d.e||'',t:d.t||'',x:cplSubType(d.x),a:d.a||''})});
     (D.cplN||[]).forEach(function(d){var p=provOf(d.c);if(pass(d.c))rows.push({type:'普通客诉',bmgr:p.bmgr||'—',mgr:p.mgr||'—',name:NAME[d.c]||d.c,e:d.e||'',t:d.t||'',x:cplSubType(d.x),a:d.a||''})});
     (D.high||[]).forEach(function(d){var p=provOf(d.c);if(pass(d.c))rows.push({type:'高标准不满意',bmgr:p.bmgr||'—',mgr:p.mgr||'—',name:NAME[d.c]||d.c,e:d.e||'',t:d.t||'',x:cplSubType(d.x),a:''})});
-    return {cols:[{t:'类型',k:'type',w:80},{t:'大区',k:'bmgr',w:84},{t:'区域经理',k:'mgr',w:96},{t:'服务商',k:'name',w:210},{t:'工程师',k:'e',w:100},{t:'日期',k:'t',w:100},{t:'客诉类型',k:'x',w:172},{t:'负激励',k:'a',num:1,neg:1,w:110}],rows:rows};}
+    return {cols:[{t:'类型',k:'type',w:70},{t:'大区',k:'bmgr',w:70},{t:'区域经理',k:'mgr',w:84},{t:'服务商',k:'name',w:150},{t:'工程师',k:'e',w:84},{t:'日期',k:'t',w:84},{t:'客诉类型',k:'x',w:150,wrap:1},{t:'负激励',k:'a',num:1,neg:1,w:80}],rows:rows};}
   if(m.detail==='praise'){var P=(DETAILS[dmk]||{}).praise||[],rows=[];
-    P.forEach(function(d){if(pass(d.c))rows.push({type:'',name:NAME[d.c]||d.c,e:d.e||'',t:d.t||'',x:d.x||'',a:''})});
-    return {cols:[{t:'服务商',k:'name'},{t:'工程师',k:'e'},{t:'日期',k:'t'},{t:'表扬内容',k:'x',wide:1}],rows:rows};}
+    P.forEach(function(d){if(pass(d.c)){var p=PROV[d.c]||{};rows.push({bmgr:p.bmgr||'—',mgr:p.mgr||'—',name:NAME[d.c]||d.c,e:d.e||'',t:d.t||'',x:d.x||''})}});
+    return {cols:[{t:'大区经理',k:'bmgr',w:96},{t:'区域经理',k:'mgr',w:96},{t:'服务商',k:'name',w:150},{t:'工程师',k:'e',w:90},{t:'日期',k:'t',w:90},{t:'表扬内容',k:'x',wide:1}],rows:rows};}
   if(m.detail==='gold'){var G=(DETAILS[dmk]||{}).gold||[],rows=[];
     G.forEach(function(d){if(pass(d.c))rows.push({type:d.gtype||'',name:NAME[d.c]||d.c,e:d.n||'',t:d.t||'',x:'',a:''})});
     return {cols:[{t:'类型',k:'type'},{t:'服务商',k:'name'},{t:'人员',k:'e'},{t:'选拔时间',k:'t'}],rows:rows};}
@@ -1708,6 +1736,7 @@ function basicDetailShell(m,dmk){
   var head='<thead><tr>'+dd.cols.map(function(c){return '<th'+(c.num?' class="num"':'')+(c.w?' style="width:'+c.w+'px"':'')+'>'+c.t+'</th>'}).join('')+'</tr></thead>';
   var body=dd.rows.map(function(r){return '<tr>'+dd.cols.map(function(c){var v=r[c.k];
     if(c.wide)return '<td style="white-space:normal;width:'+(c.w||240)+'px" class="small">'+esc(v)+'</td>';
+    if(c.wrap)return '<td style="white-space:normal">'+esc(v)+'</td>';
     if(c.num)return '<td class="num'+(c.neg?' negHi':' negc')+'">'+esc(v)+'</td>';
     return '<td'+(c.w?' style="width:'+c.w+'px"':'')+'>'+esc(v)+'</td>';}).join('')+'</tr>';}).join('')||'<tr><td colspan="'+dd.cols.length+'" class="emptyTip">无明细</td></tr>';
   return '<div class="subT"><input class="tblSearch" id="bDtlSearch" placeholder="搜索…"><button class="miniBtn" onclick="basicExport()">导出CSV</button></div>'+
@@ -1728,7 +1757,7 @@ function complaintPieChart(segs,dmk){
   var s='<svg viewBox="0 0 '+W+' '+H+'" style="max-width:280px;font-size:12px">';
   segs.forEach(function(sg){var v=sg.value||0,ang=v/total*Math.PI*2,a1=a0+ang;
     var x0=cx+r*Math.cos(a0),y0=cy+r*Math.sin(a0),x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1),large=ang>Math.PI?1:0;
-    s+='<path d="M'+cx+' '+cy+' L'+x0.toFixed(1)+' '+y0.toFixed(1)+' A'+r+' '+r+' 0 '+large+' 1 '+x1.toFixed(1)+' '+y1.toFixed(1)+' Z" fill="'+sg.color+'" opacity="0.88" style="cursor:pointer" onclick="showCplProviders(\''+esc(sg.name)+'\',\''+dmk+'\')" data-sub="'+esc(sg.name)+'"/>';
+    s+='<path d="M'+cx+' '+cy+' L'+x0.toFixed(1)+' '+y0.toFixed(1)+' A'+r+' '+r+' 0 '+large+' 1 '+x1.toFixed(1)+' '+y1.toFixed(1)+' Z" fill="'+sg.color+'" opacity="0.88" style="cursor:pointer" onmousemove="cplPieTip(event,\''+esc(sg.name)+'\',\''+dmk+'\')" onmouseleave="cplPieHide()" onclick="cplPieTip(event,\''+esc(sg.name)+'\',\''+dmk+'\')"><title>'+esc(sg.name)+'</title></path>';
     var am=(a0+a1)/2,lx=cx+(r*0.62)*Math.cos(am),ly=cy+(r*0.62)*Math.sin(am);
     s+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" fill="#04121f" font-weight="700" pointer-events="none">'+Math.round(v/total*100)+'%</text>';a0=a1;});
   s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r*0.46)+'" fill="var(--panel)"/>';
@@ -1756,11 +1785,10 @@ function renderComplaint(m,dmk){
   var segs=complaintTypePieSegs(dmk);
   var tableRows=complaintTypeTableRows(dmk);
   var left='<div class="panel"><h2><span class="bar" style="background:'+m.color+'"></span>月度变化趋势 <span class="tag">点击柱体切换分析月份 · 近3个月</span></h2>'+
-    trend3m(m,m.color,dmk,m.dec,m.target)+'<div class="chartNote">当前分析月：'+esc(dmk)+'</div></div>'+
-    '<div class="panel"><h2><span class="bar" style="background:'+m.color+'"></span>'+esc(dmk)+' 客诉类型分布 <span class="tag">点击扇形查看服务商</span></h2>'+
-    complaintPieChart(segs,dmk)+'<div id="cplProvList"></div></div>';
-  var right='<div class="panel"><h2><span class="bar" style="background:'+m.color+'"></span>'+esc(dmk)+' 客诉类型明细 <span class="tag">大类相同已合并 · 点击表头排序</span></h2>'+
-    complaintTypeTable(tableRows)+'</div>';
+    trend3m(m,m.color,dmk,m.dec,m.target)+'<div class="chartNote">当前分析月：'+esc(dmk)+'</div></div>';
+  var right='<div class="panel"><h2><span class="bar" style="background:'+m.color+'"></span>'+esc(dmk)+' 客诉类型分布 <span class="tag">悬停/点击扇形查看TOP5服务商</span></h2>'+
+    '<div class="cplDistWrap"><div class="cplPieBox">'+complaintPieChart(segs,dmk)+'</div>'+
+    '<div class="cplTblBox">'+complaintTypeTable(tableRows)+'</div></div></div>';
   var trend='<div class="basic2col equalH">'+left+right+'</div>';
   var drill='<div class="panel"><h2><span class="bar"></span>四维度钻取 <span class="tag">大区 / 区域经理 / 服务商 / 工程师 · 点击筛选/取消</span></h2>'+renderDrill(m,dmk)+'</div>';
   var detail='<div class="panel"><h2><span class="bar"></span>客诉明细 <span class="tag">可筛选 · 可排序 · 可导出</span></h2>'+basicDetailShell(m,dmk)+'</div>';
@@ -1782,26 +1810,31 @@ function renderPraise(m,dmk){
   var praises=((DETAILS[dmk]||{}).praise||[]).filter(function(d){var p=PROV[d.c];return !p||drillPass(p)}),total=praises.length;
   var byProv={};praises.forEach(function(d){(byProv[d.c]=byProv[d.c]||[]).push(d)});
   var topProv=Object.keys(byProv).map(function(c){return {code:c,name:NAME[c]||c,v:byProv[c].length,kw:praiseKeywords(byProv[c],3)};}).sort(function(a,b){return b.v-a.v}).slice(0,10);
-  var byEng={};praises.forEach(function(d){(byEng[d.e]=byEng[d.e]||[]).push(d)});
+  var byEng={};praises.forEach(function(d){var e=d.e;if(!e||e==='/'||e==='-'||String(e).trim()==='')return;(byEng[e]=byEng[e]||[]).push(d);});
   var topEng=Object.keys(byEng).map(function(e){var rows=byEng[e];var provs={};rows.forEach(function(d){var n=NAME[d.c]||d.c;provs[n]=(provs[n]||0)+1;});var pk=Object.keys(provs).sort(function(a,b){return provs[b]-provs[a];}).slice(0,2).map(function(n){return n+'×'+provs[n]});return {name:e,v:rows.length,kw:praiseKeywords(rows,3),provs:pk};}).sort(function(a,b){return b.v-a.v}).slice(0,5);
   var kwList=praiseKeywords(praises,24);
   var voices=praises.filter(function(d){return String(d.x||'').length>=30;}).slice(0,3).map(function(d){var x=String(d.x||'');return x.length>140?x.slice(0,140)+'…':x;});
   var joy='<div class="panel joyWar">';
-  joy+='<div class="joyWarHead">'+esc(dmk.replace('2026年',''))+'月 <span>来电表扬 · 服务战报</span></div>';
+  joy+='<div class="joyWarHead">'+esc(dmk.replace('2026年',''))+'月 来电表扬 服务战报</div>';
   joy+='<div class="joyWarTotal"><b>'+total+'</b> 次用户来电表扬</div>';
   joy+='<div class="joyWarBody">';
-  joy+='<div class="joyWarCol"><div class="joyWarH">TOP10 服务网点</div><table class="joyWarTbl"><thead><tr><th>#</th><th>服务网点</th><th>表扬数</th><th>关键词</th></tr></thead><tbody>'+
-    topProv.map(function(d,i){return '<tr><td>'+(i+1)+'</td><td>'+esc(d.name)+'</td><td class="num">'+d.v+'</td><td class="kw">'+d.kw.map(function(o){return esc(o.k)}).join('、')+'</td></tr>';}).join('')+'</tbody></table></div>';
+  joy+='<div class="joyWarCol"><div class="joyWarH">TOP10 服务网点</div><table class="joyWarTbl"><thead><tr><th class="c">#</th><th>服务网点</th><th class="c">表扬数</th><th>关键词</th></tr></thead><tbody>'+
+    topProv.map(function(d,i){return '<tr><td class="c">'+(i+1)+'</td><td>'+esc(d.name)+'</td><td class="c num">'+d.v+'</td><td class="kw">'+d.kw.map(function(o){return esc(o.k)}).join('、')+'</td></tr>';}).join('')+'</tbody></table></div>';
   var engHtml='<div class="joyWarH">TOP5 工程师</div>';
   if(topEng.length){
-    engHtml+='<div class="joyWarEngCards">'+
+    engHtml+='<div class="joyWarEngRow">'+
       topEng.map(function(d,i){return '<div class="joyWarEngCard"><div><span class="ecName">'+(i<3?['🥇','🥈','🥉'][i]+' ':'')+esc(d.name)+'</span><span class="ecCnt">'+d.v+'次</span></div><div class="ecProv">来自：'+(d.provs.join('、')||'—')+'</div><div class="ecKw">关键词：'+d.kw.map(function(o){return esc(o.k)}).join('、')+'</div></div>';}).join('')+'</div>';
   } else { engHtml+='<div class="emptyTip">当月无工程师表扬</div>'; }
   engHtml+='<div class="joyWarH" style="margin-top:12px">好评关键词</div><div class="joyWarKw">'+kwList.map(function(o){return '<span class="kwTag">'+esc(o.k)+'<i>'+o.v+'</i></span>';}).join('')+'</div>'+
     '<div class="joyWarH" style="margin-top:12px">用户心声</div>'+(voices.length?voices.map(function(v){return '<div class="joyWarVoice">“'+esc(v)+'”</div>';}).join(''):'<div class="emptyTip">当月无代表好评</div>');
   joy+='<div class="joyWarCol">'+engHtml+'</div>';
   joy+='</div></div>';
-  return joy+renderMetricCommon(m,dmk,{detailName:'表扬明细'});
+  var left='<div class="panel"><h2><span class="bar" style="background:'+m.color+'"></span>月度变化趋势 <span class="tag">点击柱体切换分析月份 · 近3个月</span></h2>'+
+    trend3m(m,m.color,dmk,m.dec,m.target)+'<div class="chartNote">当前分析月：'+esc(dmk)+'</div></div>';
+  var drill='<div class="panel"><h2><span class="bar"></span>四维度钻取 <span class="tag">大区 / 区域经理 / 服务商 / 工程师 · 点击筛选/取消</span></h2>'+renderDrill(m,dmk)+'</div>';
+  var trend='<div class="basic2col equalH">'+left+drill+'</div>';
+  var detail='<div class="panel"><h2><span class="bar"></span>表扬明细 <span class="tag">可筛选 · 可排序 · 可导出</span></h2>'+basicDetailShell(m,dmk)+'</div>';
+  return joy+trend+detail;
 }
 function renderRateOrSimple(m,dmk){
   return renderMetricCommon(m,dmk);
@@ -1825,7 +1858,7 @@ function ratePie(segs,dmk,m){
   var s='<svg viewBox="0 0 '+W+' '+H+'" style="max-width:280px;font-size:12px">';
   segs.forEach(function(sg){var v=sg.value||0,ang=v/total*Math.PI*2,a1=a0+ang;
     var x0=cx+r*Math.cos(a0),y0=cy+r*Math.sin(a0),x1=cx+r*Math.cos(a1),y1=cy+r*Math.sin(a1),large=ang>Math.PI?1:0;
-    s+='<path d="M'+cx+' '+cy+' L'+x0.toFixed(1)+' '+y0.toFixed(1)+' A'+r+' '+r+' 0 '+large+' 1 '+x1.toFixed(1)+' '+y1.toFixed(1)+' Z" fill="'+sg.color+'" opacity="0.88" style="cursor:pointer" onclick="showBandProviders(\'+esc(sg.name)+\',\'+m.key+\',\'+dmk+\')"><title>'+esc(sg.name)+'</title></path>';
+    s+='<path d="M'+cx+' '+cy+' L'+x0.toFixed(1)+' '+y0.toFixed(1)+' A'+r+' '+r+' 0 '+large+' 1 '+x1.toFixed(1)+' '+y1.toFixed(1)+' Z" fill="'+sg.color+'" opacity="0.88" style="cursor:pointer" onclick="showBandProviders(\''+esc(sg.name)+'\',\''+m.key+'\',\''+dmk+'\')"><title>'+esc(sg.name)+'</title></path>';
     var am=(a0+a1)/2,lx=cx+(r*0.62)*Math.cos(am),ly=cy+(r*0.62)*Math.sin(am);
     s+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" fill="#04121f" font-weight="700" pointer-events="none">'+Math.round(v/total*100)+'%</text>';a0=a1;});
   s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(r*0.46)+'" fill="var(--panel)"/>';
@@ -1876,7 +1909,7 @@ function trendGold(dmk){
   var pts=[];
   series.forEach(function(d,i){var hold=d.hold||0,add=d.add||0,h=hold/max*ph,x=padL+i*gap+(gap-bw)/2,y=H-padB-h,sel=(d.mk===dmk);
     var hAdd=add/max*ph;
-    s+='<g style="cursor:pointer" onclick="basicSetMonth(\'+esc(d.mk)+\')"><title>'+esc(d.mk)+' 保有 '+hold+' · 新增 '+add+'</title>'+
+    s+='<g style="cursor:pointer" onclick="basicSetMonth(\''+esc(d.mk)+'\')"><title>'+esc(d.mk)+' 保有 '+hold+' · 新增 '+add+'</title>'+
        '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="3" fill="#FFD24D" opacity="'+(sel?1:0.78)+'"/>'+
        (hAdd>0?'<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hAdd.toFixed(1)+'" rx="3" fill="#FF8A3D" opacity="0.95"/>':'')+
        '<text x="'+(x+bw/2).toFixed(1)+'" y="'+(y-5).toFixed(1)+'" text-anchor="middle" fill="var(--txt)">'+hold+'</text>'+
@@ -1890,17 +1923,61 @@ function trendGold(dmk){
   return s;
 }
 function renderGoldMetric(m,dmk){
-  var left='<div class="panel"><h2><span class="bar" style="background:'+m.color+'"></span>月度金牌保有量 <span class="tag">金=保有量 橙=新增</span></h2>'+trendGold(dmk)+'</div>';
-  var seEng=goldMgrSegs('工程师',dmk),seKey=goldMgrSegs('关键岗位',dmk);
-  var right='<div class="panel"><h2><span class="bar" style="background:'+m.color+'"></span>'+esc(dmk)+' 新增金牌类型分布（按区域经理）</h2>'+
-    '<div class="pieWrap">'+
-    '<div><div class="pieTtl">工程师</div>'+pieChart(seEng)+'</div>'+
-    '<div><div class="pieTtl">关键岗位</div>'+pieChart(seKey)+'</div>'+
-    '</div></div>';
+  var left='<div class="panel"><h2><span class="bar" style="background:'+m.color+'"></span>月度金牌总计（截止当月）</h2>'+trendGoldTotal(dmk)+'</div>';
+  var seEng=goldNewTable('工程师',dmk),seKey=goldNewTable('关键岗位',dmk);
+  var right='<div class="panel"><h2><span class="bar" style="background:'+m.color+'"></span>'+esc(dmk)+' 当月新增金牌</h2>'+
+    '<div class="goldNewWrap">'+seEng+seKey+'</div></div>';
   var trend='<div class="basic2col equalH">'+left+right+'</div>';
-  var drill='<div class="panel"><h2><span class="bar"></span>四维度钻取 <span class="tag">大区 / 区域经理 / 服务商 / 工程师 · 点击筛选/取消</span></h2>'+renderDrill(m,dmk)+'</div>';
+  var drill='<div class="panel"><h2><span class="bar"></span>四维度钻取 <span class="tag">大区 / 区域经理 / 服务商 / 人员 · 点击筛选/取消</span></h2>'+renderDrill(m,dmk)+'</div>';
   return trend+drill;
 }
+
+function trendGoldTotal(dmk){
+  var anchor=F.month||MONTH_KEYS[MONTH_KEYS.length-1];
+  var series=MONTH_KEYS.filter(function(mk){return mk<=anchor;}).map(function(mk){
+    var rows=(MONTHS[mk]||[]).filter(drillPass);
+    return {mk:mk, v:sum(rows,function(p){return p.goldCum||0})};
+  });
+  if(!series.length)return '<div class="emptyTip">无数据</div>';
+  var W=920,H=300,padL=8,padR=8,padT=22,padB=36,pw=W-padL-padR,ph=H-padT-padB;
+  var max=Math.max.apply(null,series.map(function(d){return d.v||0}))||1;
+  var n=series.length,gap=pw/n,bw=Math.min(64,gap*0.55);
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="font-size:12px">';
+  s+='<line x1="'+padL+'" y1="'+(H-padB)+'" x2="'+(W-padR)+'" y2="'+(H-padB)+'" stroke="var(--line)"/>';
+  var pts=[];
+  series.forEach(function(d,i){var v=d.v||0,h=v/max*ph,x=padL+i*gap+(gap-bw)/2,y=H-padB-h,sel=(d.mk===dmk);
+    s+='<g style="cursor:pointer" onclick="basicSetMonth(\''+esc(d.mk)+'\')"><title>'+esc(d.mk)+' 金牌总计 '+v+'</title>'+
+       '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="3" fill="#FFD24D" opacity="'+(sel?1:0.8)+'"/>'+
+       '<text x="'+(x+bw/2).toFixed(1)+'" y="'+(y-5).toFixed(1)+'" text-anchor="middle" fill="var(--txt)">'+v+'</text>'+
+       '<text x="'+(x+bw/2).toFixed(1)+'" y="'+(H-padB+18).toFixed(1)+'" text-anchor="middle" fill="'+(sel?'var(--cyan)':'var(--txt3)')+'">'+esc(d.mk.replace('2026年',''))+'</text></g>';
+    pts.push([x+bw/2,y]);});
+  if(pts.length>1){var dp=smoothPath(pts);s+='<path d="'+dp+'" fill="none" stroke="#FFD24D" stroke-width="2.5" opacity="0.95"/>';pts.forEach(function(pt){s+='<circle cx="'+pt[0].toFixed(1)+'" cy="'+pt[1].toFixed(1)+'" r="3.5" fill="#FFD24D" stroke="var(--panel)" stroke-width="1.5"/>'});}
+  s+='</svg>';
+  s+='<div class="chartNote">■ 截止当月金牌保有量总计 · 点击柱体切换月份</div>';
+  return s;
+}
+function goldNewTable(gtype,dmk){
+  var G=(DETAILS[dmk]||{}).gold||[];
+  var rows=G.filter(function(d){return d.gtype===gtype && (PROV[d.c]?drillPass(PROV[d.c]):true);})
+            .map(function(d){return {c:NAME[d.c]||d.c,n:d.n||'—',t:d.t||''};})
+            .sort(function(a,b){return String(b.t).localeCompare(String(a.t),'zh');});
+  var head=gtype==='工程师'?['服务商','名称','选拔时间']:['区服务商','名称','选拔时间'];
+  var body=rows.map(function(r){return '<tr><td>'+esc(r.c)+'</td><td>'+esc(r.n)+'</td><td class="small">'+esc(r.t)+'</td></tr>';}).join('')||'<tr><td colspan="3" class="emptyTip">无</td></tr>';
+  return '<div class="goldNewBox"><div class="pieTtl">'+gtype+'（当月新增 '+rows.length+'）</div>'+
+    '<table class="goldNewTbl"><thead><tr><th data-sortable>'+head[0]+'</th><th data-sortable>'+head[1]+'</th><th data-sortable>'+head[2]+'</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+}
+function cplPieTip(evt,sub,dmk){
+  var el=$('cplPieTip');if(!el){el=document.createElement('div');el.id='cplPieTip';el.className='cplPieTip';document.body.appendChild(el);}
+  if(sub==='其他'){el.innerHTML='<div class="ttl">其他</div><div class="small">为占比≤5%的类型合并</div>';}
+  else{var rows=cplProvOfType(sub,dmk).slice(0,5);el.innerHTML='<div class="ttl">「'+esc(sub)+'」TOP5 服务商</div>'+(rows.length?rows.map(function(r){return '<div class="tr"><span>'+esc(r.name)+'</span><span>'+r.cnt+'</span></div>';}).join(''):'<div class="small">无数据</div>');}
+  el.style.display='block';
+  var x=evt.clientX+14,y=evt.clientY+14;
+  if(x+240>window.innerWidth)x=window.innerWidth-244;
+  if(y+160>window.innerHeight)y=window.innerHeight-164;
+  el.style.left=x+'px';el.style.top=y+'px';
+}
+function cplPieHide(){var el=$('cplPieTip');if(el)el.style.display='none';}
+
 function renderBasic(key){
   BASIC_KEY=key||BASIC_KEY;
   var m=BASIC_METRICS.filter(function(x){return x.key===BASIC_KEY})[0]; if(!m)return;
@@ -1919,7 +1996,7 @@ function renderBasic(key){
   else html+=renderRateMetric(m,dmk);
   $("basicBody").innerHTML=html;
   document.querySelectorAll('.subTab').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-k')===BASIC_KEY)});
-  document.querySelectorAll('.drillTbl').forEach(function(t){t.querySelectorAll('thead th').forEach(function(th){if(!th.getAttribute('data-sortable'))return;th.setAttribute('data-sortable','1');th.addEventListener('click',function(){sortTable(th)});});});
+  document.querySelectorAll('#basicBody table').forEach(function(t){t.querySelectorAll('thead th[data-sortable]').forEach(function(th){th.addEventListener('click',function(){sortTable(th)});});});
   basicWireDetail(m);
 }
 
@@ -1948,7 +2025,7 @@ function sortTable(th){
 }
 function makeSortable(tid){
   var t=$(tid); if(!t)return;
-  t.querySelectorAll('thead th').forEach(function(th){if(!th.getAttribute('data-sortable')){th.setAttribute('data-sortable','1');th.addEventListener('click',function(){sortTable(th)});}});
+  t.querySelectorAll('thead th').forEach(function(th){if(!th.hasAttribute('data-sortable')){th.setAttribute('data-sortable','1');th.addEventListener('click',function(){sortTable(th)});}});
 }
 
 initFilters();renderAll();setPage(1);
