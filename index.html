@@ -412,6 +412,7 @@ th[data-sortable]:hover{color:var(--cyan)}
 .kwTag i{font-style:normal;color:#ffec99;font-weight:700;margin-left:3px}
 .joyWarVoice{font-size:11px;color:#fee2e2;background:rgba(255,255,255,.08);border-left:3px solid #ef4444;border-radius:4px;padding:6px 10px;margin:5px 0;line-height:1.5}
 .dScroll{flex:1 1 auto;min-height:0;max-height:400px;overflow:auto}
+#engPoolScroll{max-height:600px;overflow:auto}
 .drill3{grid-template-columns:repeat(3,1fr)}
 @media(max-width:1300px){.drill3{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){.drill3{grid-template-columns:1fr}}
@@ -2206,8 +2207,8 @@ function renderEngPool(){
     '<button class="miniBtn" onclick="engResetRange()">全部累计</button>'+
     '<input class="tblSearch" id="engPoolSearch" placeholder="搜索人员 / 服务商 / 区域经理…" oninput="filterEngPool()">'+
     '<span class="chartNote" style="margin:0">共 '+rows.length+' 人 · 表扬 '+totP+' · 电商好评 '+totE+' · 雷区 '+totT+' · 普通客诉 '+totN+' · 高标准不满 '+totH+' · 金牌 '+totG+'</span></div>';
-  html+='<div class="chartNote">轻量版计分（与服务商口径一致）：来电表扬 +5 · 电商好评 +0.2/条 · 雷区客诉 −50 · 普通客诉 −20 · 高标准不满意 −20 · 金牌 +20；总积分 = 各项求和。绿色=正向、红色=负向。区域经理/大区经理取自【网点及人员对应表】；顶部大区/区域/服务商筛选可联动过滤本表。工程师按「名称+网点」唯一匹配，避免同名不同人合并。</div>';
-  html+='<div class="dScroll"><table class="drillTbl" id="engPoolTbl"><thead><tr>'+
+  html+='<div class="chartNote">轻量版计分（与服务商口径一致）：来电表扬 +5 · 电商好评 +0.2/条 · 雷区客诉 −50 · 普通客诉 −20 · 高标准不满意 −20 · 金牌 +20；总积分 = 各项求和。绿色=正向、红色=负向。</div>';
+  html+='<div class="dScroll" id="engPoolScroll"><table class="drillTbl" id="engPoolTbl"><thead><tr>'+
     '<th data-sortable>人员</th><th data-sortable>所属服务商</th><th data-sortable>区域经理</th><th data-sortable>大区经理</th>'+
     '<th data-sortable class="num">来电表扬</th><th data-sortable class="num">电商好评</th><th data-sortable class="num">雷区客诉</th><th data-sortable class="num">普通客诉</th><th data-sortable class="num">高标准不满意</th><th data-sortable class="num">金牌</th><th data-sortable class="num">总积分</th>'+
     '</tr></thead><tbody>'+body+'</tbody>'+
