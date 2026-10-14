@@ -629,7 +629,7 @@ th[data-sortable]:hover{color:var(--cyan)}
 
 <div class="hdr" data-page-node-id="LtQBwIeAD3ojSvmzEZFpLj">
   <h1 data-page-node-id="q02M6nTdEAE1ssjXJAAoaE">服务积分池看板</h1>
-  <div class="subTime" data-page-node-id="SKFoOAHdeckMwRSjc5yKfW">数据更新时间：2026-10-14 10:36</div>
+  <div class="subTime" data-page-node-id="SKFoOAHdeckMwRSjc5yKfW">数据更新时间：2026-10-14 12:09</div>
   <div class="fbar" data-page-node-id="JyUUS7pHAp2FfNxajlPZJK">
     <div class="pgTabs" data-page-node-id="uTBP2SF0JE1JddVDzbKDe3">
       <button class="pgTab on" id="tab1" onclick="setPage(1)" data-page-node-id="GZ5BmkfaasKdxptqCql25j">积分总览</button>
@@ -837,6 +837,12 @@ var NAME={};MONTH_KEYS.forEach(function(k){MONTHS[k].forEach(function(p){NAME[p.
  * 覆写 p.total(综合积分,含结转) 与 p.surplus(=carrySur)；并写 p.carryPrev/p.abiUsed/p.carrySurplus。
  * 边界：首月或无上月数据 → carryPrev=0；跨年(1月) → 清零重算。
  */
+/* 能力积分结转起始月（按试点报名月）：PILOT_CODES 前6家原试点从2026年3月起累积，后17家新试点从2026年9月起累积；
+   非试点服务商沿用原逻辑（自首个有数据月起累积）。仅影响跨月结转结余（p.carryPrev/carrySurplus/surplus），
+   不影响当月能力积分 cap 与当月抵扣计算。报名月之前：不结转、结余清零、不向前传递。 */
+var CAP_CARRY_START={};
+for(var _pc=0;_pc<PILOT_CODES.length;_pc++){ CAP_CARRY_START[PILOT_CODES[_pc]] = (_pc<6)?'2026年3月':'2026年9月'; }
+function _enrolled(pt, startMk){ var s=_mkParts(startMk); return (pt.y>s.y)||(pt.y===s.y&&pt.m>=s.m); }
 function _mkParts(mk){var m=/(\d{4})年(\d{1,2})月/.exec(mk);return m?{y:+m[1],m:+m[2]}:{y:0,m:0}}
 function applyCarryover(){
   var keys=MONTH_KEYS.slice().sort(function(a,b){var x=_mkParts(a),y=_mkParts(b);return (x.y-y.y)||(x.m-y.m)});
@@ -846,7 +852,8 @@ function applyCarryover(){
     if(pt.m===1) prevCarry={};               // 跨年清零
     var list=MONTHS[mk]||[], nextCarry={};
     list.forEach(function(p){
-      var carryPrev=prevCarry[p.code]||0;
+      var enrolled=!(p.code in CAP_CARRY_START) || _enrolled(pt, CAP_CARRY_START[p.code]); // 非试点/已达报名月 → 参与结转
+      var carryPrev=enrolled?(prevCarry[p.code]||0):0;
       var satPos=(p.sat||0)*(p.coef||0);
       var neg=(p.neg||0), cap=(p.cap||0);
       var pool=cap+carryPrev;
@@ -860,7 +867,8 @@ function applyCarryover(){
       p.carrySurplus=carrySur;
       p.total=satPos+pool-neg;   // 综合积分（含结转，允许为负）
       p.surplus=carrySur;                     // 月度能力盈余（滚下月）
-      nextCarry[p.code]=carrySur;
+      if(!enrolled){ p.carryPrev=0; p.carrySurplus=0; p.surplus=0; } // 未到报名月：不累积结转
+      nextCarry[p.code]= enrolled? carrySur : 0;
     });
     prevCarry=nextCarry;
   });
