@@ -629,7 +629,7 @@ th[data-sortable]:hover{color:var(--cyan)}
 
 <div class="hdr" data-page-node-id="LtQBwIeAD3ojSvmzEZFpLj">
   <h1 data-page-node-id="q02M6nTdEAE1ssjXJAAoaE">服务积分池看板</h1>
-  <div class="subTime" data-page-node-id="SKFoOAHdeckMwRSjc5yKfW">数据更新时间：2026-10-15 11:53</div>
+  <div class="subTime" data-page-node-id="SKFoOAHdeckMwRSjc5yKfW">数据更新时间：2026-10-15 16:13</div>
   <div class="fbar" data-page-node-id="JyUUS7pHAp2FfNxajlPZJK">
     <div class="pgTabs" data-page-node-id="uTBP2SF0JE1JddVDzbKDe3">
       <button class="pgTab on" id="tab1" onclick="setPage(1)" data-page-node-id="GZ5BmkfaasKdxptqCql25j">积分总览</button>
@@ -1894,8 +1894,8 @@ function basicNonMonth(p){
 function basicMonthSeries(m){
   return MONTH_KEYS.map(function(mk){
     var rows=(MONTHS[mk]||[]).filter(drillPass);
-    var vals=rows.map(m.get).filter(function(v){return v!=null});
-    var v = m.agg==='avg' ? (vals.length? vals.reduce(function(a,b){return a+b},0)/vals.length : null) : vals.reduce(function(a,b){return a+b},0);
+    /* 与右侧三维钻取同口径：百分比指标按 denKey 分母加权（basicMetricAgg），避免趋势值≠钻取值 */
+    var v=basicMetricAgg(rows,m);
     return {mk:mk, v:v, n:rows.length};
   });
 }
